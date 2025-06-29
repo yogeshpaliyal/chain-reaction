@@ -11,7 +11,9 @@ data class Cell(
     val x: Int,
     val y: Int,
     val owner: Player?,
-    val molecules: Int
+    val molecules: Int,
+    val captureAnimation: Boolean = false,
+    val previousOwner: Player? = null
 )
 
 // --- Game State ---
@@ -23,4 +25,3 @@ data class GameState(
     val winner: Player? = null,
     val playerTurns: Map<Int, Int> = emptyMap() // playerId to turns taken
 )
-

@@ -77,9 +77,13 @@ fun resolveExplosions(state: GameState, x: Int, y: Int): GameState {
     val owner = cell.owner
     getAdjacentCells(x, y, width, height).forEach { (nx, ny) ->
         val adjCell = updatedGrid[ny][nx]
+        // Track ownership changes with animation flag
+        val isCaptured = adjCell.owner != null && adjCell.owner != owner
         updatedGrid[ny][nx] = adjCell.copy(
             owner = owner,
-            molecules = adjCell.molecules + 1
+            molecules = adjCell.molecules + 1,
+            captureAnimation = isCaptured,
+            previousOwner = if (isCaptured) adjCell.owner else null
         )
     }
     var newState = state.copy(grid = updatedGrid.map { it.toList() })
@@ -94,4 +98,3 @@ fun resolveExplosions(state: GameState, x: Int, y: Int): GameState {
     }
     return newState
 }
-

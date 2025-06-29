@@ -69,6 +69,8 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation("br.com.devsrsouza.compose.icons:tabler-icons:1.1.1")
+
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

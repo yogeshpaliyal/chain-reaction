@@ -1,6 +1,5 @@
 package com.yogeshpaliyal.chainreaction
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -8,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.yogeshpaliyal.chainreaction.game.Player
+import com.yogeshpaliyal.chainreaction.ui.AppTheme
 import com.yogeshpaliyal.chainreaction.ui.ChainReactionGame
 import com.yogeshpaliyal.chainreaction.ui.GameConfig
 import com.yogeshpaliyal.chainreaction.ui.GameSetupScreen
@@ -21,25 +21,54 @@ sealed class Screen {
 @Composable
 @Preview
 fun App() {
-    MaterialTheme {
-        var screen by remember { mutableStateOf<Screen>(Screen.Setup) }
+    var screen by remember { mutableStateOf<Screen>(Screen.Setup) }
+    var showExitConfirmation by remember { mutableStateOf(false) }
 
+    // Maintain separate state for setup screen dark mode for immediate theme changes
+    var setupScreenDarkMode by remember { mutableStateOf(false) }
+
+    // Get current screen config for theme
+    val isDarkMode = when (val s = screen) {
+        is Screen.Game -> s.config.darkMode
+        is Screen.Setup -> setupScreenDarkMode // Use the separate state for setup
+    }
+
+
+    AppTheme(darkTheme = isDarkMode) {
         when (val s = screen) {
             is Screen.Setup -> {
-                GameSetupScreen(onStartGame = { config ->
-                    screen = Screen.Game(config)
-                })
+                GameSetupScreen(
+                    initialDarkMode = setupScreenDarkMode,
+                    onThemeChanged = { newDarkMode ->
+                        setupScreenDarkMode = newDarkMode
+                    },
+                    onStartGame = { config ->
+                        screen = Screen.Game(config)
+                    }
+                )
             }
             is Screen.Game -> {
-                val players = (0 until s.config.playerCount).map {
-                    Player(it, s.config.playerNames[it], DefaultPlayerColors[it])
-                }
                 ChainReactionGame(
                     gridWidth = s.config.gridWidth,
                     gridHeight = s.config.gridHeight,
-                    players = players,
+                    players = (0 until s.config.playerCount).map {
+                        Player(it, s.config.playerNames[it], DefaultPlayerColors[it])
+                    },
                     enable3D = s.config.enable3D,
-                    onGameEnd = { screen = Screen.Setup }
+                    onGameEnd = {
+                        // Update setup screen dark mode when returning to setup
+                        setupScreenDarkMode = s.config.darkMode
+                        screen = Screen.Setup
+                    },
+                    onBackPressed = { showExitConfirmation = true },
+                    showExitConfirmation = showExitConfirmation,
+                    onExitConfirmed = {
+                        // Update setup screen dark mode when returning to setup
+                        setupScreenDarkMode = s.config.darkMode
+                        showExitConfirmation = false
+                        screen = Screen.Setup
+                    },
+                    onExitCancelled = { showExitConfirmation = false }
                 )
             }
         }
