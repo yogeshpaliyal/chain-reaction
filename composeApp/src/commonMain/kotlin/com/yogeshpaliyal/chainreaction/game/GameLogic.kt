@@ -65,7 +65,7 @@ fun placeMolecule(
     }
 }
 
-fun resolveExplosions(state: GameState, x: Int, y: Int): GameState {
+fun resolveExplosions(state: GameState, x: Int, y: Int, level: Int = 0): GameState {
     val width = state.grid[0].size
     val height = state.grid.size
     val cell = state.grid[y][x]
@@ -75,26 +75,32 @@ fun resolveExplosions(state: GameState, x: Int, y: Int): GameState {
     val updatedGrid = state.grid.map { it.toMutableList() }
     updatedGrid[y][x] = cell.copy(owner = null, molecules = 0)
     val owner = cell.owner
+
+    // Process adjacent cells
     getAdjacentCells(x, y, width, height).forEach { (nx, ny) ->
         val adjCell = updatedGrid[ny][nx]
-        // Track ownership changes with animation flag
+        // Track ownership changes with animation flag and include explosion level
         val isCaptured = adjCell.owner != null && adjCell.owner != owner
         updatedGrid[ny][nx] = adjCell.copy(
             owner = owner,
             molecules = adjCell.molecules + 1,
             captureAnimation = isCaptured,
-            previousOwner = if (isCaptured) adjCell.owner else null
+            previousOwner = if (isCaptured) adjCell.owner else null,
+            explosionLevel = level + 1  // Increment level for cascading effect
         )
     }
+
     var newState = state.copy(grid = updatedGrid.map { it.toList() })
+
     // Recursively resolve further explosions
     getAdjacentCells(x, y, width, height).forEach { (nx, ny) ->
         val c = newState.grid[ny][nx]
         val t = getCellType(nx, ny, width, height)
         val cap = cellCapacity(t)
         if (c.molecules > cap) {
-            newState = resolveExplosions(newState, nx, ny)
+            newState = resolveExplosions(newState, nx, ny, level + 1)
         }
     }
+
     return newState
 }

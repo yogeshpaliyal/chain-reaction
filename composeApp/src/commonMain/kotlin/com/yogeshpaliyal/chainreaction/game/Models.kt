@@ -13,7 +13,8 @@ data class Cell(
     val owner: Player?,
     val molecules: Int,
     val captureAnimation: Boolean = false,
-    val previousOwner: Player? = null
+    val previousOwner: Player? = null,
+    val explosionLevel: Int = 0  // Level of cascade for animation timing
 )
 
 // --- Game State ---

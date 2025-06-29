@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlin.math.min
 
 @Composable
@@ -34,7 +35,8 @@ fun AtomsMoleculesView(
     enable3D: Boolean,
     isCapturing: Boolean = false,
     previousColor: Color? = null,
-    size: Dp = 32.dp // Default size, now customizable
+    size: Dp = 32.dp, // Default size, now customizable
+    explosionLevel: Int = 0 // Added explosion level for cascading effect
 ) {
     // Calculate radius based on container size
     val radius = size * 0.18f // Relative radius based on container size
@@ -51,7 +53,7 @@ fun AtomsMoleculesView(
     )
 
     // Remember original color and animate to new color when capturing
-    var currentColor by remember(color, isCapturing) {
+    var currentColor by remember(color, isCapturing, explosionLevel) {
         mutableStateOf(if (isCapturing && previousColor != null) previousColor else color)
     }
 
@@ -61,33 +63,49 @@ fun AtomsMoleculesView(
     // Glow effect for captures
     val glowAlpha = remember { Animatable(0f) }
 
-    // Color transition for captures
-    LaunchedEffect(isCapturing, color) {
-        if (isCapturing && previousColor != null) {
-            // Start with previous color, animate to new color
+    // Animation has started flag to prevent re-triggering
+    var animationStarted by remember { mutableStateOf(false) }
+
+    // Color transition for captures with cascade delay based on explosion level
+    LaunchedEffect(isCapturing, color, explosionLevel) {
+        if (isCapturing && previousColor != null && !animationStarted) {
+            animationStarted = true
+
+            // Delay based on explosion level - creates cascading effect
+            // Each level waits longer to start its animation
+            val cascadeDelay = explosionLevel * 300L // 300ms per level
+            delay(cascadeDelay)
+
+            // Start with previous color
             currentColor = previousColor
 
-            // Pulse animation
+            // Enhanced capture animation sequence
+
+            // 1. Quick scale up
             pulseScale.animateTo(
-                targetValue = 1.5f,
-                animationSpec = tween(durationMillis = 200)
+                targetValue = 1.6f, // More dramatic expansion
+                animationSpec = tween(durationMillis = 180)
             )
+
+            // 2. Glow effect peaks as molecule expands
+            glowAlpha.animateTo(
+                targetValue = 0.8f,
+                animationSpec = tween(durationMillis = 130)
+            )
+
+            // 3. Scale down with color change
             pulseScale.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 200)
+                animationSpec = tween(durationMillis = 220)
             )
 
-            // Glow effect
-            glowAlpha.animateTo(
-                targetValue = 0.7f,
-                animationSpec = tween(durationMillis = 150)
-            )
+            // 4. Fade glow
             glowAlpha.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(durationMillis = 450)
+                animationSpec = tween(durationMillis = 350)
             )
 
-            // Transition to new color
+            // Transition to new color - happens during scale down
             currentColor = color
         }
     }

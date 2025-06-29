@@ -6,7 +6,7 @@ A turn-based strategy game inspired by the classic "Chain Reaction" game, built 
 
 ## 📱 Play Now
 
-You can play the latest version of the game here: [Reaction Cascade Web Demo](https://yourusername.github.io/Chain-Reaction/) 
+You can play the latest version of the game here: [Reaction Cascade Web Demo](https://yogeshpaliyal.github.io/chain-reaction/) 
 
 ## 🎮 Game Overview
 
