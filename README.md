@@ -6,7 +6,19 @@ A turn-based strategy game inspired by the classic "Chain Reaction" game, built 
 
 ## 📱 Play Now
 
-You can play the latest version of the game here: [Reaction Cascade Web Demo](https://yogeshpaliyal.github.io/chain-reaction/) 
+You can play the latest version of the game in your browser: [Reaction Cascade Web Demo](https://yourusername.github.io/Chain-Reaction/) 
+
+## 📥 Download
+
+Download and play Reaction Cascade on your desktop:
+
+| Platform | Download |
+|----------|----------|
+| Windows | [.exe installer](https://github.com/yourusername/Chain-Reaction/releases/latest/download/ReactionCascade.exe) \| [.msi installer](https://github.com/yourusername/Chain-Reaction/releases/latest/download/ReactionCascade.msi) |
+| macOS | [.dmg installer](https://github.com/yourusername/Chain-Reaction/releases/latest/download/ReactionCascade.dmg) |
+| Linux | [.AppImage](https://github.com/yourusername/Chain-Reaction/releases/latest/download/ReactionCascade.AppImage) \| [.deb package](https://github.com/yourusername/Chain-Reaction/releases/latest/download/ReactionCascade.deb) |
+
+For all versions and release notes, check the [releases page](https://github.com/yourusername/Chain-Reaction/releases).
 
 ## 🎮 Game Overview
 
