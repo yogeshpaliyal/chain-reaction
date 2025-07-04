@@ -176,14 +176,15 @@ fun ChainReactionGame(
                                 for (x in 0 until gridWidth) {
                                     val cell = gameState.grid[y][x]
                                     val cellType = getCellType(x, y, gridWidth, gridHeight)
-                                    val borderColor = cell.owner?.color ?: Color.Gray
+                                    val currentPlayerColor = gameState.players[gameState.currentPlayerIndex].color
+                                    val borderColor = cell.owner?.color ?: currentPlayerColor
 
                                     // Cell with adaptive size
                                     Box(
                                         modifier = Modifier
                                             .size(cellSizeDp)
                                             .border(
-                                                width = (cellSizeDp * 0.05f).coerceAtMost(3.dp),
+                                                width = (cellSizeDp * 0.02f).coerceAtMost(1.dp),
                                                 color = borderColor
                                             )
                                             .background(MaterialTheme.colorScheme.surface)
