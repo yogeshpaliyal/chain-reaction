@@ -25,82 +25,101 @@ fun getAdjacentCells(x: Int, y: Int, width: Int, height: Int): List<Pair<Int, In
         x to y - 1, x to y + 1, x - 1 to y, x + 1 to y
     ).filter { (nx, ny) -> nx in 0 until width && ny in 0 until height }
 
-fun placeMolecule(
-    state: GameState,
-    x: Int,
-    y: Int
-): GameState {
-    if (state.isGameOver) return state
-    state.grid[0].size
-    state.grid.size
+fun placeMoleculeAndResolve(state: GameState, x: Int, y: Int): GameState {
     val cell = state.grid[y][x]
     val currentPlayer = state.players[state.currentPlayerIndex]
-    if (cell.owner != null && cell.owner != currentPlayer) return state // Invalid move
-    // Place molecule
+
+    if (cell.owner != null && cell.owner != currentPlayer) return state
+
     val updatedGrid = state.grid.map { it.toMutableList() }
     updatedGrid[y][x] = cell.copy(
         owner = currentPlayer,
-        molecules = cell.molecules + 1
+        molecules = cell.molecules + 1,
+        previousOwner = cell.owner
     )
-    // Update player turn count
-    val updatedTurns = state.playerTurns.toMutableMap()
-    updatedTurns[currentPlayer.id] = (updatedTurns[currentPlayer.id] ?: 0) + 1
-    return resolveExplosions(
-        state.copy(grid = updatedGrid.map { it.toList() }, playerTurns = updatedTurns),
-        x,
-        y
-    ).let { nextState ->
-        // Only eliminate players who have played at least one turn
-        val activePlayers = nextState.players.filter { p ->
-            (nextState.playerTurns[p.id] ?: 0) > 0 &&
-                    nextState.grid.flatten().any { it.owner == p }
+
+    val turns = state.playerTurns.toMutableMap()
+    turns[currentPlayer.id] = (turns[currentPlayer.id] ?: 0) + 1
+
+    var newState = state.copy(grid = updatedGrid.map { it.toList() }, playerTurns = turns)
+    val width = newState.grid[0].size
+    val height = newState.grid.size
+
+    var explosionsOccurred = true
+    while (explosionsOccurred) {
+        val cellsToExplode = newState.grid.flatten().filter { it.molecules > cellCapacity(getCellType(it.x, it.y, width, height)) }
+        if (cellsToExplode.isEmpty()) {
+            explosionsOccurred = false
+            continue
         }
-        // Only declare winner if all players have played at least one turn
-        val allPlayed = nextState.players.all { (nextState.playerTurns[it.id] ?: 0) > 0 }
-        if (allPlayed && activePlayers.size == 1) {
-            nextState.copy(isGameOver = true, winner = activePlayers.first())
-        } else {
-            nextState.copy(currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.size)
+
+        val currentGrid = newState.grid.map { it.toMutableList() }
+        cellsToExplode.forEach { explodingCell ->
+            val owner = explodingCell.owner
+            currentGrid[explodingCell.y][explodingCell.x] = explodingCell.copy(
+                owner = null,
+                molecules = 0,
+                isExploding = true,
+                explodingToPositions = getAdjacentCells(explodingCell.x, explodingCell.y, width, height),
+                previousOwner = owner // Preserve owner for animation color
+            )
+
+            getAdjacentCells(explodingCell.x, explodingCell.y, width, height).forEach { (nx, ny) ->
+                val adjCell = currentGrid[ny][nx]
+                val isCaptured = adjCell.owner != null && adjCell.owner != owner
+                currentGrid[ny][nx] = adjCell.copy(
+                    owner = owner,
+                    molecules = adjCell.molecules + 1,
+                    captureAnimation = isCaptured,
+                    previousOwner = if (isCaptured) adjCell.owner else adjCell.previousOwner,
+                    receivingExplosion = true,
+                    explosionSourcePosition = explodingCell.x to explodingCell.y
+                )
+            }
         }
-    }
-}
-
-fun resolveExplosions(state: GameState, x: Int, y: Int, level: Int = 0): GameState {
-    val width = state.grid[0].size
-    val height = state.grid.size
-    val cell = state.grid[y][x]
-    val type = getCellType(x, y, width, height)
-    val capacity = cellCapacity(type)
-    if (cell.molecules <= capacity) return state
-    val updatedGrid = state.grid.map { it.toMutableList() }
-    updatedGrid[y][x] = cell.copy(owner = null, molecules = 0)
-    val owner = cell.owner
-
-    // Process adjacent cells
-    getAdjacentCells(x, y, width, height).forEach { (nx, ny) ->
-        val adjCell = updatedGrid[ny][nx]
-        // Track ownership changes with animation flag and include explosion level
-        val isCaptured = adjCell.owner != null && adjCell.owner != owner
-        updatedGrid[ny][nx] = adjCell.copy(
-            owner = owner,
-            molecules = adjCell.molecules + 1,
-            captureAnimation = isCaptured,
-            previousOwner = if (isCaptured) adjCell.owner else null,
-            explosionLevel = level + 1  // Increment level for cascading effect
-        )
-    }
-
-    var newState = state.copy(grid = updatedGrid.map { it.toList() })
-
-    // Recursively resolve further explosions
-    getAdjacentCells(x, y, width, height).forEach { (nx, ny) ->
-        val c = newState.grid[ny][nx]
-        val t = getCellType(nx, ny, width, height)
-        val cap = cellCapacity(t)
-        if (c.molecules > cap) {
-            newState = resolveExplosions(newState, nx, ny, level + 1)
-        }
+        newState = newState.copy(grid = currentGrid.map { it.toList() })
     }
 
     return newState
+}
+
+fun cleanupAnimationState(state: GameState): GameState {
+    val cleanedGrid = state.grid.map { row ->
+        row.map { cell ->
+            cell.copy(
+                isExploding = false,
+                explodingToPositions = emptyList(),
+                receivingExplosion = false,
+                explosionSourcePosition = null,
+                captureAnimation = false,
+                previousOwner = null
+            )
+        }
+    }
+    return state.copy(grid = cleanedGrid)
+}
+
+fun advanceTurn(state: GameState): GameState {
+    // Check for winner only after all players have had at least one turn
+    val allPlayersHavePlayed = state.players.all { (state.playerTurns[it.id] ?: 0) > 0 }
+    if (allPlayersHavePlayed) {
+        val activePlayers = state.players.filter { p -> state.grid.flatten().any { it.owner == p } }
+        if (activePlayers.size <= 1) {
+            return state.copy(isGameOver = true, winner = activePlayers.firstOrNull())
+        }
+    }
+
+    var nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.size
+
+    // Skip players who have been eliminated
+    while (allPlayersHavePlayed && state.grid.flatten().none { it.owner == state.players[nextPlayerIndex] }) {
+        nextPlayerIndex = (nextPlayerIndex + 1) % state.players.size
+        // This check prevents an infinite loop if only one player is left.
+        if (nextPlayerIndex == state.currentPlayerIndex) {
+            val activePlayers = state.players.filter { p -> state.grid.flatten().any { it.owner == p } }
+            return state.copy(isGameOver = true, winner = activePlayers.firstOrNull())
+        }
+    }
+
+    return state.copy(currentPlayerIndex = nextPlayerIndex)
 }

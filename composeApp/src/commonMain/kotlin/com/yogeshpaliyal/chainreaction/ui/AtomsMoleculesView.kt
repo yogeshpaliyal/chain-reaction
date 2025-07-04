@@ -1,6 +1,7 @@
 package com.yogeshpaliyal.chainreaction.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -36,7 +37,14 @@ fun AtomsMoleculesView(
     isCapturing: Boolean = false,
     previousColor: Color? = null,
     size: Dp = 32.dp, // Default size, now customizable
-    explosionLevel: Int = 0 // Added explosion level for cascading effect
+    explosionLevel: Int = 0, // Added explosion level for cascading effect
+    isExploding: Boolean = false,
+    explodingToPositions: List<Pair<Int, Int>> = emptyList(),
+    receivingExplosion: Boolean = false,
+    explosionSourcePosition: Pair<Int, Int>? = null,
+    cellPosition: Pair<Int, Int>? = null,
+    gridWidth: Int = 0,
+    gridHeight: Int = 0
 ) {
     // Calculate radius based on container size
     val radius = size * 0.18f // Relative radius based on container size
@@ -62,6 +70,18 @@ fun AtomsMoleculesView(
 
     // Glow effect for captures
     val glowAlpha = remember { Animatable(0f) }
+
+    val explosionProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(isExploding) {
+        if (isExploding) {
+            explosionProgress.snapTo(0f)
+            explosionProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+            )
+        }
+    }
 
     // Animation has started flag to prevent re-triggering
     var animationStarted by remember { mutableStateOf(false) }
@@ -111,7 +131,7 @@ fun AtomsMoleculesView(
     }
 
     // Animate scale for pop-in effect
-    val scale by animateFloatAsState(
+    val popInScale by animateFloatAsState(
         targetValue = 1f,
         animationSpec = tween(durationMillis = 350),
         label = "atomScale"
@@ -141,45 +161,69 @@ fun AtomsMoleculesView(
             )
         }
 
-        withTransform({
-            rotate(rotation.value)
-            scale(scale * pulseScale.value)
-        }) {
-            for (i in 0 until min(count, 3)) {
-                val pos = atomPositions.getOrNull(i) ?: canvasCenter
-                if (enable3D) {
-                    // Simulate 3D with radial gradient and highlight
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(currentColor.copy(alpha = 0.95f), currentColor.copy(alpha = 0.7f), Color.White.copy(alpha = 0.2f)),
-                            center = pos + Offset(radiusPx * 0.3f, radiusPx * 0.3f),
-                            radius = radiusPx * 1.2f
-                        ),
-                        radius = radiusPx,
-                        center = pos
+        if (isExploding) {
+            val progress = explosionProgress.value
+            if (progress > 0f && progress < 1f) { // Draw only during the animation
+                explodingToPositions.forEach { targetPos ->
+                    val direction = Offset(
+                        x = (targetPos.first - (cellPosition?.first ?: 0)).toFloat(),
+                        y = (targetPos.second - (cellPosition?.second ?: 0)).toFloat()
                     )
-                    // Highlight
+
+                    val distance = size.toPx()
+                    val animatedOffset = canvasCenter + (direction * distance * progress)
+
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.35f),
-                        radius = radiusPx * 0.4f,
-                        center = pos - Offset(radiusPx * 0.3f, radiusPx * 0.3f)
-                    )
-                } else {
-                    drawCircle(
-                        color = currentColor,
+                        color = color,
                         radius = radiusPx,
-                        center = pos
+                        center = animatedOffset
                     )
                 }
             }
-        }
+        } else if (count > 0) {
+            withTransform({
+                rotate(rotation.value)
+                scale(
+                    scale = popInScale * pulseScale.value,
+                    pivot = canvasCenter
+                )
+            }) {
+                for (i in 0 until min(count, 3)) {
+                    val pos = atomPositions.getOrNull(i) ?: canvasCenter
+                    if (enable3D) {
+                        // Simulate 3D with radial gradient and highlight
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(currentColor.copy(alpha = 0.95f), currentColor.copy(alpha = 0.7f), Color.White.copy(alpha = 0.2f)),
+                                center = pos + Offset(radiusPx * 0.3f, radiusPx * 0.3f),
+                                radius = radiusPx * 1.2f
+                            ),
+                            radius = radiusPx,
+                            center = pos
+                        )
+                        // Highlight
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.35f),
+                            radius = radiusPx * 0.4f,
+                            center = pos - Offset(radiusPx * 0.3f, radiusPx * 0.3f)
+                        )
+                    } else {
+                        drawCircle(
+                            color = currentColor,
+                            radius = radiusPx,
+                            center = pos
+                        )
+                    }
+                }
+            }
 
-        if (count > 3) {
-            drawCircle(
-                color = Color.Black,
-                radius = radiusPx * 0.5f * scale,
-                center = Offset(size.toPx() - radiusPx, radiusPx)
-            )
+            if (count > 3) {
+                drawCircle(
+                    color = Color.Black,
+                    radius = radiusPx * 0.5f * popInScale,
+                    center = Offset(size.toPx() - radiusPx, radiusPx)
+                )
+            }
         }
     }
 }
