@@ -40,11 +40,7 @@ fun AtomsMoleculesView(
     explosionLevel: Int = 0, // Added explosion level for cascading effect
     isExploding: Boolean = false,
     explodingToPositions: List<Pair<Int, Int>> = emptyList(),
-    receivingExplosion: Boolean = false,
-    explosionSourcePosition: Pair<Int, Int>? = null,
     cellPosition: Pair<Int, Int>? = null,
-    gridWidth: Int = 0,
-    gridHeight: Int = 0
 ) {
     // Calculate radius based on container size
     val radius = size * 0.18f // Relative radius based on container size
@@ -152,14 +148,7 @@ fun AtomsMoleculesView(
             )
         }
 
-        // Draw glow effect if capturing
-        if (isCapturing && glowAlpha.value > 0) {
-            drawCircle(
-                color = color.copy(alpha = glowAlpha.value),
-                radius = size.toPx() * 0.45f,
-                center = canvasCenter
-            )
-        }
+
 
         if (isExploding) {
             val progress = explosionProgress.value
@@ -183,10 +172,6 @@ fun AtomsMoleculesView(
         } else if (count > 0) {
             withTransform({
                 rotate(rotation.value)
-                scale(
-                    scale = popInScale * pulseScale.value,
-                    pivot = canvasCenter
-                )
             }) {
                 for (i in 0 until min(count, 3)) {
                     val pos = atomPositions.getOrNull(i) ?: canvasCenter

@@ -262,11 +262,7 @@ fun ChainReactionGame(
                                                 explosionLevel = renderCell.explosionLevel,
                                                 isExploding = renderCell.isExploding,
                                                 explodingToPositions = renderCell.explodingToPositions,
-                                                receivingExplosion = renderCell.receivingExplosion,
-                                                explosionSourcePosition = renderCell.explosionSourcePosition,
-                                                cellPosition = renderCell.x to renderCell.y,
-                                                gridWidth = gridWidth,
-                                                gridHeight = gridHeight
+                                                cellPosition = renderCell.x to renderCell.y
                                             )
                                         } else {
                                             Text(
