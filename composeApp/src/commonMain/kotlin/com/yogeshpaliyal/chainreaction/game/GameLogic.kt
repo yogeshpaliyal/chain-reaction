@@ -45,39 +45,56 @@ fun placeMoleculeAndResolve(state: GameState, x: Int, y: Int): GameState {
     val width = newState.grid[0].size
     val height = newState.grid.size
 
+    // Process explosions in levels to create proper cascade animation
+    var explosionLevel = 0
     var explosionsOccurred = true
+
     while (explosionsOccurred) {
-        val cellsToExplode = newState.grid.flatten().filter { it.molecules > cellCapacity(getCellType(it.x, it.y, width, height)) }
+        val cellsToExplode = newState.grid.flatten().filter {
+            it.molecules > cellCapacity(getCellType(it.x, it.y, width, height))
+        }
+
         if (cellsToExplode.isEmpty()) {
             explosionsOccurred = false
             continue
         }
 
         val currentGrid = newState.grid.map { it.toMutableList() }
+
+        // Process each exploding cell
         cellsToExplode.forEach { explodingCell ->
             val owner = explodingCell.owner
+            val adjacentCells = getAdjacentCells(explodingCell.x, explodingCell.y, width, height)
+
+            // Mark the exploding cell
             currentGrid[explodingCell.y][explodingCell.x] = explodingCell.copy(
                 owner = null,
                 molecules = 0,
                 isExploding = true,
-                explodingToPositions = getAdjacentCells(explodingCell.x, explodingCell.y, width, height),
-                previousOwner = owner // Preserve owner for animation color
+                explodingToPositions = adjacentCells,
+                previousOwner = owner,
+                explosionLevel = explosionLevel
             )
 
-            getAdjacentCells(explodingCell.x, explodingCell.y, width, height).forEach { (nx, ny) ->
+            // Update adjacent cells that receive molecules
+            adjacentCells.forEach { (nx, ny) ->
                 val adjCell = currentGrid[ny][nx]
-                val isCaptured = adjCell.owner != null && adjCell.owner != owner
+                val wasCaptured = adjCell.owner != null && adjCell.owner != owner
+
                 currentGrid[ny][nx] = adjCell.copy(
                     owner = owner,
                     molecules = adjCell.molecules + 1,
-                    captureAnimation = isCaptured,
-                    previousOwner = if (isCaptured) adjCell.owner else adjCell.previousOwner,
+                    captureAnimation = wasCaptured,
+                    previousOwner = if (wasCaptured) adjCell.owner else null,
                     receivingExplosion = true,
-                    explosionSourcePosition = explodingCell.x to explodingCell.y
+                    explosionSourcePosition = explodingCell.x to explodingCell.y,
+                    explosionLevel = explosionLevel + 1
                 )
             }
         }
+
         newState = newState.copy(grid = currentGrid.map { it.toList() })
+        explosionLevel++
     }
 
     return newState
