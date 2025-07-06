@@ -82,25 +82,20 @@ fun AtomsMoleculesView(
             isCurrentlyExploding = true
 
             // Add delay based on explosion level for cascade effect
-            delay(explosionLevel * 150L)
+            delay(explosionLevel * 1500L)
 
-            // Build-up phase
-//            pulseScale.animateTo(
-//                targetValue = 1.4f,
-//                animationSpec = tween(durationMillis = 200)
-//            )
 
             // Explosion glow
             glowAlpha.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 100)
+                animationSpec = tween(durationMillis = 150)
             )
 
             // Atoms fly out animation
             explosionProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(
-                    durationMillis = 400,
+                    durationMillis = 150,
                     easing = FastOutSlowInEasing
                 )
             )
@@ -108,14 +103,13 @@ fun AtomsMoleculesView(
             // Fade out glow
             glowAlpha.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(durationMillis = 200)
+                animationSpec = tween(durationMillis = 150)
             )
 
             // Reset after animation
-            delay(100)
+            delay(150)
             isCurrentlyExploding = false
             explosionProgress.snapTo(0f)
-            pulseScale.snapTo(1f)
         }
     }
 
