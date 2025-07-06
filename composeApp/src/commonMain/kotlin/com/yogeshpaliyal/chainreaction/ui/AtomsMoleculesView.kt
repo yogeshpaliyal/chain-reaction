@@ -279,13 +279,6 @@ fun AtomsMoleculesView(
                 }
             }
 
-            if (count > 3) {
-                drawCircle(
-                    color = Color.Black,
-                    radius = radiusPx * 0.5f * popInScale,
-                    center = Offset(size.toPx() - radiusPx, radiusPx)
-                )
-            }
         }
     }
 }

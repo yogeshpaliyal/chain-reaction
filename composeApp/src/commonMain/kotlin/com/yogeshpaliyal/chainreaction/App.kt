@@ -49,12 +49,7 @@ fun App() {
             }
             is Screen.Game -> {
                 ChainReactionGame(
-                    gridWidth = s.config.gridWidth,
-                    gridHeight = s.config.gridHeight,
-                    players = (0 until s.config.playerCount).map {
-                        Player(it, s.config.playerNames[it], DefaultPlayerColors[it])
-                    },
-                    enable3D = s.config.enable3D,
+                    gameConfig = s.config,
                     onGameEnd = {
                         // Update setup screen dark mode when returning to setup
                         setupScreenDarkMode = s.config.darkMode

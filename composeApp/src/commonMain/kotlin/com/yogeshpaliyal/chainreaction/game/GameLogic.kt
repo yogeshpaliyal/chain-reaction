@@ -25,7 +25,7 @@ fun getAdjacentCells(x: Int, y: Int, width: Int, height: Int): List<Pair<Int, In
         x to y - 1, x to y + 1, x - 1 to y, x + 1 to y
     ).filter { (nx, ny) -> nx in 0 until width && ny in 0 until height }
 
-fun placeMoleculeAndResolve(state: GameState, x: Int, y: Int): GameState {
+fun placeMolecule(state: GameState, x: Int, y: Int): GameState {
     val cell = state.grid[y][x]
     val currentPlayer = state.players[state.currentPlayerIndex]
 
@@ -41,63 +41,59 @@ fun placeMoleculeAndResolve(state: GameState, x: Int, y: Int): GameState {
     val turns = state.playerTurns.toMutableMap()
     turns[currentPlayer.id] = (turns[currentPlayer.id] ?: 0) + 1
 
-    var newState = state.copy(grid = updatedGrid.map { it.toList() }, playerTurns = turns)
-    val width = newState.grid[0].size
-    val height = newState.grid.size
+    return state.copy(grid = updatedGrid.map { it.toList() }, playerTurns = turns)
+}
 
-    // Process explosions in levels to create proper cascade animation
-    var explosionLevel = 0
-    var explosionsOccurred = true
+fun runChainReactionStep(state: GameState, explosionLevel: Int): GameState {
+    val width = state.grid[0].size
+    val height = state.grid.size
 
-    while (explosionsOccurred) {
-        val cellsToExplode = newState.grid.flatten().filter {
-            it.molecules > cellCapacity(getCellType(it.x, it.y, width, height))
-        }
-
-        if (cellsToExplode.isEmpty()) {
-            explosionsOccurred = false
-            continue
-        }
-
-        val currentGrid = newState.grid.map { it.toMutableList() }
-
-        // Process each exploding cell
-        cellsToExplode.forEach { explodingCell ->
-            val owner = explodingCell.owner
-            val adjacentCells = getAdjacentCells(explodingCell.x, explodingCell.y, width, height)
-
-            // Mark the exploding cell
-            currentGrid[explodingCell.y][explodingCell.x] = explodingCell.copy(
-                owner = null,
-                molecules = 0,
-                isExploding = true,
-                explodingToPositions = adjacentCells,
-                previousOwner = owner,
-                explosionLevel = explosionLevel
-            )
-
-            // Update adjacent cells that receive molecules
-            adjacentCells.forEach { (nx, ny) ->
-                val adjCell = currentGrid[ny][nx]
-                val wasCaptured = adjCell.owner != null && adjCell.owner != owner
-
-                currentGrid[ny][nx] = adjCell.copy(
-                    owner = owner,
-                    molecules = adjCell.molecules + 1,
-                    captureAnimation = wasCaptured,
-                    previousOwner = if (wasCaptured) adjCell.owner else null,
-                    receivingExplosion = true,
-                    explosionSourcePosition = explodingCell.x to explodingCell.y,
-                    explosionLevel = explosionLevel + 1
-                )
-            }
-        }
-
-        newState = newState.copy(grid = currentGrid.map { it.toList() })
-        explosionLevel++
+    val cellsToExplode = state.grid.flatten().filter {
+        it.molecules > cellCapacity(getCellType(it.x, it.y, width, height)) && !it.isExploding
     }
 
-    return newState
+    if (cellsToExplode.isEmpty()) {
+        return state
+    }
+
+    val currentGrid = state.grid.map { it.toMutableList() }
+
+    cellsToExplode.forEach { explodingCell ->
+        val owner = explodingCell.owner
+        val adjacentCells = getAdjacentCells(explodingCell.x, explodingCell.y, width, height)
+
+        currentGrid[explodingCell.y][explodingCell.x] = explodingCell.copy(
+            owner = null,
+            molecules = 0,
+            isExploding = true,
+            explodingToPositions = adjacentCells,
+            previousOwner = owner,
+            explosionLevel = explosionLevel
+        )
+
+        adjacentCells.forEach { (nx, ny) ->
+            val adjCell = currentGrid[ny][nx]
+            val wasCaptured = adjCell.owner != null && adjCell.owner != owner
+
+            currentGrid[ny][nx] = adjCell.copy(
+                owner = owner,
+                molecules = adjCell.molecules + 1,
+                captureAnimation = wasCaptured,
+                previousOwner = if (wasCaptured) adjCell.owner else null,
+                receivingExplosion = true,
+                explosionSourcePosition = explodingCell.x to explodingCell.y,
+                explosionLevel = explosionLevel + 1
+            )
+        }
+    }
+
+    return state.copy(grid = currentGrid.map { it.toList() })
+}
+
+fun hasPendingExplosions(state: GameState): Boolean {
+    val width = state.grid[0].size
+    val height = state.grid.size
+    return state.grid.flatten().any { it.molecules > cellCapacity(getCellType(it.x, it.y, width, height)) }
 }
 
 fun cleanupAnimationState(state: GameState): GameState {
